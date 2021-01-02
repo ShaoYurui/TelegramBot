@@ -84,6 +84,7 @@ conv_handler = ConversationHandler(
     )
 updater.dispatcher.add_handler(conv_handler)
 updater.dispatcher.add_handler(CommandHandler('list',list))
+updater.dispatcher.add_handler(CommandHandler('buy',list))
 updater.dispatcher.add_handler(CommandHandler('AY20G20B',bg_data))
 
 updater.start_polling()
