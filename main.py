@@ -1,20 +1,18 @@
 TELEGRAM_BOT_TOKEN = "1497002692:AAGZ15U0t9ymCg7C4kQgUMUOwetWAG5ahFg"
+from time import sleep
+import datetime
 from telegram import Update,Message
-from telegram.ext import Updater, CommandHandler,ConversationHandler, CallbackContext, MessageHandler, Filters
-
+from telegram.ext import Updater, CommandHandler,ConversationHandler, CallbackContext, MessageHandler, Filters, JobQueue
 updater = Updater(TELEGRAM_BOT_TOKEN)
-tmp_name = "NULL"
-tmp_seller="NULL"
-tmp_price = "NULL"
-tmp_photo_id = "NULL"
-tmp_index = 0;
-max_num =10;
-no_listing = 0;
-no_sold = 0;
+MY_CHAT_ID = 495295265
+MY_CROUP_CHAT_ID = -503183212
+WeWardrobe_CHAT_ID = -1001409782425
 
-class item:
-    def __init__(self, name,price,photo,seller,index,info='NIL'):
+
+class ITEM:
+    def __init__(self, name='NIL',price=0,photo='NIL',seller='NIL',index=0,info='NIL',msg_id = 0):
         self.name = name
+        self.message_id = msg_id
         self.price = price
         self.photo = photo
         self.seller = seller
@@ -22,118 +20,182 @@ class item:
         self.info = info
 
 
-itme_list= []
-
-PRODUCT_NAME, PRODUCT_PRICE, PRODUCT_PHOTO,PRODUCT_INFO = range(4)
-
-def test_sample():
-    global tmp_index,no_listing
-    no_listing=3
-    tmp_index=3
-    itme_list.append(item(name="Jeans", price=10,
-                          photo="AgACAgUAAxkBAAIGyl_x9232CVj9IVgxvmdUZIR3AAG7FQAC_6sxG6IwkVdyqYyqm3ORAeifwmx0AAMBAAMCAAN5AANcxQUAAR4E",
-                          seller="yuruuii", index=0))
-    itme_list.append(item(name="Dress", price=90,
-                          photo="AgACAgUAAxkBAAIG11_x95zjElmJo3aVzrAFUS83wHNXAAJeqzEbD8GJV7ytHUv4QnNQ1oxlbHQAAwEAAwIAA3kAA9MFBwABHgQ",
-                          seller="yuruuii", index=1))
-    itme_list.append(item(name="Jacket", price=10,
-                          photo="AgACAgUAAxkBAAIG4F_x967NhJFh6UJ7DJT7FxA1sa4GAALWqzEbfcOJVyDIgnTARKpBCdlFbXQAAwEAAwIAA3kAA1MyAgABHgQ",
-                          seller="yuruuii", index=2))
+items_list = []
+items_sold = []
+waste_msg_list = []
+pre_reminder = 0
+no_listing = 0
+no_sold = 0
+roll_stop = 1
 
 
 def sell(update : Update, context : CallbackContext) -> int:
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f"Hi @{update.effective_user.username}\nwhat product are you selling?\n(e.g. jeans,black jacket...)")
+    global no_listing
+    no_listing += 1
+    waste_msg_list.append(update.effective_message.message_id)
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                                   text=f"/cancel to cancel").message_id
+    waste_msg_list.append(tmp)
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=f"Hi @{update.effective_user.username}\nwhat product are you selling?\n(e.g. jeans,black jacket...)").message_id
+    waste_msg_list.append(tmp)
+
+    items_list.append(ITEM(index=no_listing))
     return PRODUCT_NAME
 
+
 def product_name(update : Update, context : CallbackContext) -> int:
-    global tmp_name
-    tmp_name = update.message.text
-    context.bot.send_message( chat_id=update.effective_chat.id,
-                              text=f"@{update.effective_user.username}\nwhat is the price for 【{tmp_name}】 ?")
+    items_list[-1].name = update.message.text
+    waste_msg_list.append(update.effective_message.message_id)
+    tmp = context.bot.send_message( chat_id=update.effective_chat.id,
+                              text=f"@{update.effective_user.username}\nwhat is the price for [{items_list[-1].name}] ?").message_id
+    waste_msg_list.append(tmp)
     return PRODUCT_PRICE
 
+
 def product_price(update : Update, context : CallbackContext) -> int:
-    global tmp_price
-    tmp_price = update.message.text
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f"@{update.effective_user.username}\nplease send 【ONE】 photo of your 【{tmp_name}】 to the group for reference.")
+    waste_msg_list.append(update.effective_message.message_id)
+    items_list[-1].price = update.message.text
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=f"@{update.effective_user.username}\n"
+                                  f"please send [ONE] photo of your [{items_list[-1].price}] to the group for reference.").message_id
+    waste_msg_list.append(tmp)
     return PRODUCT_PHOTO
 
+
 def product_photo(update : Update, context : CallbackContext) -> int:
-    global tmp_index, tmp_photo_id, tmp_seller, no_listing
-    tmp_seller = update.effective_user.username
-    tmp_photo_id = update.message.photo[-1].file_id
-    context.bot.send_message(chat_id=update.effective_chat.id,text = f"@{update.effective_user.username}, Do you want to add more information?\n(e.g. size small, 9/10 new) ")
+    waste_msg_list.append(update.effective_message.message_id)
+    items_list[-1].seller = update.effective_user.username
+    items_list[-1].photo = update.message.photo[-1].file_id
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                                   text = f"@{update.effective_user.username}, Do you want to add more information?\n"
+                                          f"(e.g. size small, 9/10 new) ").message_id
+    waste_msg_list.append(tmp)
     return PRODUCT_INFO
 
+
 def product_info(update : Update, context : CallbackContext) -> int:
-    global tmp_index, tmp_photo_id, tmp_seller, no_listing
-    tmp_info = update.message.text
-    context.bot.send_photo(chat_id=update.effective_chat.id, photo=tmp_photo_id,
-                           caption=f"Dear @{update.effective_user.username}\nyou are selling 【{tmp_name}】 for 【{tmp_price}】\ninfo : {tmp_info}")
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers")
-    itme_list.append(item(name=tmp_name, price=tmp_price, photo=tmp_photo_id, seller=tmp_seller, index=tmp_index, info = tmp_info))
-    if (tmp_index == max_num):
-        itme_list.pop(0);
-    else:
-        tmp_index += 1
-    no_listing += 1;
+    global pre_reminder
+    waste_msg_list.append(update.effective_message.message_id)
+    items_list[-1].info = update.message.text
+    items_list[-1].message_id = context.bot.send_photo(chat_id=update.effective_chat.id, photo=items_list[-1].photo,
+                           caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
+                                   f"info : {items_list[-1].info}\n"
+                                   f"Please contact @{update.effective_user.username} for more information").message_id
+    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
+                             text=f"A new item has been added\ntotal number of item listed = [{no_listing}]")
+    context.bot.forwardMessage(chat_id=MY_CROUP_CHAT_ID, from_chat_id=update.effective_chat.id,
+                               message_id=items_list[-1].message_id )
+
+    if pre_reminder != 0:
+        context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=pre_reminder)
+    pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers").message_id
+    for i in waste_msg_list:
+        context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
+    waste_msg_list.clear()
     return ConversationHandler.END
+
 
 def cancel(update : Update, context : CallbackContext) -> int:
-    update.message.reply_text("canceled")
+    global no_listing
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="canceled").message_id
+    waste_msg_list.append(tmp)
+    sleep(2)
+    context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=update._effective_message.message_id)
+    for i in waste_msg_list:
+        context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
+    items_list.pop(-1)
+    no_listing -= 1
+    waste_msg_list.clear()
     return ConversationHandler.END
 
-def list(update : Update, context : CallbackContext):
-    if tmp_index == 0:
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="No listing yet")
-    for i in range(tmp_index):
-        context.bot.send_photo(chat_id=update.effective_chat.id,photo=itme_list[i].photo,
-                               caption=f"【{itme_list[i].name}】 for 【{itme_list[i].price}】\ninfo : {itme_list[i].info}\nplease DM @{itme_list[i].seller} for more information")
+
+def bg_data(update : Update, context : CallbackContext):
+    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
+                             text=f"total number of items listed is {no_listing}")
+    for i in range(len(items_list)):
+        context.bot.send_photo(chat_id=MY_CROUP_CHAT_ID,photo=items_list[i].photo,
+                               caption=f"id : {items_list[i].index}\nname : {items_list[i].name}\nprice : {items_list[i].price}\nseller: @{items_list[i].seller}")
+
+    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
+                             text=f"total number of items sold is {no_sold}")
+    for i in range(len(items_sold)):
+        context.bot.send_photo(chat_id=MY_CROUP_CHAT_ID,photo=items_sold[i].photo,
+                               caption=f"id : {items_sold[i].index}\nname : {items_sold[i].name}\nprice : {items_sold[i].price}\nseller: @{items_sold[i].seller}")
+    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
+                             text=f"total number of items listed is {no_listing}")
+    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
+                             text=f"total number of items sold is {no_sold}")
+
 
 def sold(update : Update, context : CallbackContext):
     global no_sold
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text="Thank you for using RVRC Shared Closet")
-    no_sold += 1
+    msg_id = update.effective_message.reply_to_message.message_id
+    for i in range(len(items_list)):
+        if items_list[i].message_id == msg_id:
+            if items_list[i].seller == update.effective_user.username:
+                items_sold.append(items_list[i])
+                no_sold += 1
+                tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text="Thank you for using RVRC Shared Closet").message_id
+                context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
+                                         text=f"The following item has been sold\ntotal number of item sold = [{no_sold}]")
+                context.bot.forwardMessage(chat_id=MY_CROUP_CHAT_ID,from_chat_id=update.effective_chat.id,message_id=update.effective_message.reply_to_message.message_id)
+                sleep(5)
+                context.bot.deleteMessage(chat_id=update.effective_chat.id,
+                                          message_id=update.effective_message.reply_to_message.message_id)
+                context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=tmp)
+                items_list.pop(i)
 
-def remove(update : Update, context : CallbackContext):
-    global tmp_index
-    target = str(update.message.text)
-    target=target.replace('/remove','')
-    target=target.replace(' ', '')
+            else:
+                tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text="Only the seller can change the status").message_id
+                sleep(5)
+                context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=tmp)
+            context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=update._effective_message.message_id)
+            return
 
-    if target == '':
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="please re-type with item id")
+
+def unknown(update : Update, context : CallbackContext):
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.").message_id
+    sleep(5)
+    context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=tmp)
+    context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=update._effective_message.message_id)
+
+
+def roll_start(context : CallbackContext):
+    if no_listing == 0 or roll_stop == 1: return
+    global pre_reminder
+    if(no_listing == 0) :
+        context.bot.send_message(chat_id=MY_CHAT_ID, text="unable to roll as no_listing = 0")
         return
-    target=int(target)
-    if target<tmp_index:
-        context.bot.send_photo(chat_id=update.effective_chat.id, photo=itme_list[target].photo,
-                               caption=f"item[{target}] removed")
-        itme_list.pop(target)
-        tmp_index -= 1
-    else:
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="please check item id")
+    tmp = items_list[0]
+    items_list.pop(0)
+    items_list.append(tmp)
+    tmp = context.bot.copyMessage(chat_id=WeWardrobe_CHAT_ID,from_chat_id=WeWardrobe_CHAT_ID,message_id=items_list[-1].message_id).message_id
+    context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID, message_id=items_list[-1].message_id)
+    if pre_reminder != 0:
+        context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID,message_id=pre_reminder)
+    pre_reminder = context.bot.send_message(chat_id=WeWardrobe_CHAT_ID,
+                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers").message_id
+    items_list[-1].message_id = tmp
 
-def bg_data(update : Update, context : CallbackContext):
-    if tmp_index == 0:
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="No listing yet")
-    for i in range(tmp_index):
-        context.bot.send_photo(chat_id=update.effective_chat.id,photo=itme_list[i].photo,
-                               caption=f"id : {itme_list[i].index}\nname : {itme_list[i].name}\nprice : {itme_list[i].price}\nseller: @{itme_list[i].seller}")
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f"total number of items listed is {no_listing}")
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f"total number of items sold is {no_sold}")
 
-test_sample()
+def roll(update : Update, context : CallbackContext):
+    global roll_stop
+    roll_stop = 0
+    if no_listing == 0 or roll_stop == 1: return
+    context.job_queue.run_repeating(roll_start,interval=60*60*24)
 
+
+def stproll(update : Update, context : CallbackContext):
+    global roll_stop
+    roll_stop = 1
+
+
+PRODUCT_NAME, PRODUCT_PRICE, PRODUCT_PHOTO,PRODUCT_INFO = range(4)
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('sell', sell)],
         states={
@@ -142,14 +204,14 @@ conv_handler = ConversationHandler(
             PRODUCT_PHOTO: [MessageHandler(Filters.photo & (~Filters.command), product_photo)],
             PRODUCT_INFO: [MessageHandler(Filters.text & (~Filters.command), product_info)],
         },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
+        fallbacks=[CommandHandler('cancel', cancel)])
 updater.dispatcher.add_handler(conv_handler)
-updater.dispatcher.add_handler(CommandHandler('list',list))
-updater.dispatcher.add_handler(CommandHandler('buy',list))
 updater.dispatcher.add_handler(CommandHandler('sold',sold))
-updater.dispatcher.add_handler(CommandHandler('remove',remove))
+updater.dispatcher.add_handler(CommandHandler('roll',roll))
+updater.dispatcher.add_handler(CommandHandler('stproll',stproll))
 updater.dispatcher.add_handler(CommandHandler('bbb',bg_data))
+unknown_handler = MessageHandler(Filters.command, unknown)
+updater.dispatcher.add_handler(unknown_handler)
 
 updater.start_polling()
 updater.idle()
