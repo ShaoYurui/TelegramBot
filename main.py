@@ -166,7 +166,7 @@ def unknown(update : Update, context : CallbackContext):
 
 
 def roll_start(context : CallbackContext):
-    if no_listing == 0 or roll_stop == 1: return
+    if roll_stop == 1: return
     global pre_reminder
     if(no_listing == 0) :
         context.bot.send_message(chat_id=MY_CHAT_ID, text="unable to roll as no_listing = 0")
