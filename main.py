@@ -224,7 +224,7 @@ def roll(update : Update, context : CallbackContext):
 
     context.bot.send_message(chat_id=MY_CHAT_ID, text="start rolling")
     roll_start(context)
-    context.job_queue.run_repeating(roll_start,interval=10)
+    context.job_queue.run_repeating(roll_start,interval=12*60*60)
 
 
 def stproll(update : Update, context : CallbackContext):
