@@ -54,7 +54,7 @@ def product_name(update : Update, context : CallbackContext) -> int:
     items_list[-1].name = update.message.text
     waste_msg_list.append(update.effective_message.message_id)
     tmp = context.bot.send_message( chat_id=update.effective_chat.id,
-                              text=f"@{update.effective_user.username}\nwhat is the price for **[{items_list[-1].name}]** ?").message_id
+                              text=f"@{update.effective_user.username}\nwhat is the price for [{items_list[-1].name}] ?").message_id
     waste_msg_list.append(tmp)
     return PRODUCT_PRICE
 
@@ -64,7 +64,7 @@ def product_price(update : Update, context : CallbackContext) -> int:
     items_list[-1].price = update.message.text
     tmp = context.bot.send_message(chat_id=update.effective_chat.id,
                              text=f"@{update.effective_user.username}\n"
-                                  f"please send [ONE] photo of your **[{items_list[-1].name}]** to the group for reference.").message_id
+                                  f"please send [ONE] photo of your [{items_list[-1].name}] to the group for reference.").message_id
     waste_msg_list.append(tmp)
     return PRODUCT_PHOTO
 
@@ -85,7 +85,7 @@ def product_info(update : Update, context : CallbackContext) -> int:
     waste_msg_list.append(update.effective_message.message_id)
     items_list[-1].info = update.message.text
     items_list[-1].message_id = context.bot.send_photo(chat_id=update.effective_chat.id, photo=items_list[-1].photo,
-                           caption=f"**[{items_list[-1].name}]** for **[{items_list[-1].price}]**\n"
+                           caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
                                    f"info : {items_list[-1].info}\n"
                                    f"Please contact @{items_list[-1].seller} for more information").message_id
 
@@ -97,7 +97,7 @@ def product_info(update : Update, context : CallbackContext) -> int:
     if pre_reminder != 0:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=pre_reminder)
     pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
-                             text="Please be reminded that due to COVID-19, please **WASH** your clothes before passing it to the buyers.\n\nReply your item with /sold to remove your item.").message_id
+                             text="Please be reminded that due to COVID-19, please WASH your clothes before passing it to the buyers.\n\nReply your item with /sold to remove your item.").message_id
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
     waste_msg_list.clear()
