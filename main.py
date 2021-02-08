@@ -87,7 +87,7 @@ def product_info(update : Update, context : CallbackContext) -> int:
     items_list[-1].message_id = context.bot.send_photo(chat_id=update.effective_chat.id, photo=items_list[-1].photo,
                            caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
                                    f"info : {items_list[-1].info}\n"
-                                   f"Please contact @{update.effective_user.username} for more information").message_id
+                                   f"Please contact @{items_list[-1].seller} for more information").message_id
 
 #    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
 #                             text=f"A new item has been added\ntotal number of item listed = [{no_listing}]")
@@ -97,7 +97,7 @@ def product_info(update : Update, context : CallbackContext) -> int:
     if pre_reminder != 0:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=pre_reminder)
     pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
-                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers").message_id
+                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
     waste_msg_list.clear()
@@ -205,13 +205,17 @@ def roll_start(context : CallbackContext):
     tmp = items_list[0]
     items_list.pop(0)
     items_list.append(tmp)
-    tmp = context.bot.copyMessage(chat_id=WeWardrobe_CHAT_ID,from_chat_id=WeWardrobe_CHAT_ID,message_id=items_list[-1].message_id).message_id
+    tmp = context.bot.send_photo(chat_id=WeWardrobe_CHAT_ID, photo=items_list[-1].photo,
+                           caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
+                                   f"info : {items_list[-1].info}\n"
+                                   f"Please contact @{items_list[-1].seller} for more information").message_id
     context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID, message_id=items_list[-1].message_id)
+    items_list[-1].message_id = tmp
     if pre_reminder != 0:
         context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID,message_id=pre_reminder)
     pre_reminder = context.bot.send_message(chat_id=WeWardrobe_CHAT_ID,
-                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers").message_id
-    items_list[-1].message_id = tmp
+                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
+
 
 
 def roll(update : Update, context : CallbackContext):
