@@ -87,7 +87,7 @@ def product_info(update : Update, context : CallbackContext) -> int:
     items_list[-1].info = update.message.text
     if update.effective_user.username == "yuruuii":
         tmp = context.bot.send_message(chat_id=update.effective_chat.id,
-                                                text="seller's name ?")
+                                                text="seller's name ?").message_id
         waste_msg_list.append(tmp)
         return PRODUCT_SELLER
     items_list[-1].message_id = context.bot.send_photo(chat_id=update.effective_chat.id, photo=items_list[-1].photo,
