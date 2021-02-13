@@ -27,6 +27,7 @@ pre_reminder = 0
 no_listing = 0
 no_sold = 0
 roll_stop = 0
+started = 0
 availability = 1
 
 
@@ -84,24 +85,45 @@ def product_info(update : Update, context : CallbackContext) -> int:
     global pre_reminder,availability
     waste_msg_list.append(update.effective_message.message_id)
     items_list[-1].info = update.message.text
+    if update.effective_user.username == "yuruuii":
+        tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                                                text="seller's name ?")
+        waste_msg_list.append(tmp)
+        return PRODUCT_SELLER
     items_list[-1].message_id = context.bot.send_photo(chat_id=update.effective_chat.id, photo=items_list[-1].photo,
                            caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
                                    f"info : {items_list[-1].info}\n"
                                    f"Please contact @{items_list[-1].seller} for more information").message_id
 
-#    context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
-#                             text=f"A new item has been added\ntotal number of item listed = [{no_listing}]")
-#    context.bot.forwardMessage(chat_id=MY_CROUP_CHAT_ID, from_chat_id=update.effective_chat.id,
-#                               message_id=items_list[-1].message_id )
-
     if pre_reminder != 0:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=pre_reminder)
     pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
-                             text="Please be reminded that due to COVID-19, please WASH your clothes before passing it to the buyers.\n\nUse command /sell to sell your clothes\nReply your item with /sold to remove your item.").message_id
+                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
     waste_msg_list.clear()
     availability = 1
+
+    return ConversationHandler.END
+
+
+def product_seller(update : Update, context : CallbackContext) -> int:
+    global pre_reminder,availability
+    items_list[-1].seller = update.message.text
+    waste_msg_list.append(update.effective_message.message_id)
+    items_list[-1].message_id = context.bot.send_photo(chat_id=update.effective_chat.id, photo=items_list[-1].photo,
+                                                       caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
+                                                               f"info : {items_list[-1].info}\n"
+                                                               f"Please contact @{items_list[-1].seller} for more information").message_id
+    if pre_reminder != 0:
+        context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=pre_reminder)
+    pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
+                                            text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
+    for i in waste_msg_list:
+        context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=f"{i}")
+    waste_msg_list.clear()
+    availability = 1
+
     return ConversationHandler.END
 
 
@@ -209,26 +231,31 @@ def roll_start(context : CallbackContext):
                            caption=f"[{items_list[-1].name}] for [{items_list[-1].price}]\n"
                                    f"info : {items_list[-1].info}\n"
                                    f"Please contact @{items_list[-1].seller} for more information").message_id
-    context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID, message_id=items_list[-1].message_id)
+    w = items_list[-1].message_id
     items_list[-1].message_id = tmp
-    if pre_reminder != 0:
-        context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID,message_id=pre_reminder)
+    tmp = pre_reminder;
     pre_reminder = context.bot.send_message(chat_id=WeWardrobe_CHAT_ID,
-                             text="Please be reminded that due to COVID-19, please WASH your clothes before passing it to the buyers.\n\nUse command /sell to sell your clothes\nReply your item with /sold to remove your item.").message_id
+                                            text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
+    context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID, message_id=w)
+    if tmp != 0:
+        context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID,message_id=tmp)
 
 
 
 def roll(update : Update, context : CallbackContext):
-    global roll_stop
+    global roll_stop,started
 
     if roll_stop == 1:
         context.bot.send_message(chat_id=MY_CHAT_ID, text="rolling resume")
         roll_stop = 0
         return
-
-    context.bot.send_message(chat_id=MY_CHAT_ID, text="start rolling")
-    roll_start(context)
-    context.job_queue.run_repeating(roll_start,interval=12*60*60)
+    if started == 0:
+        context.bot.send_message(chat_id=MY_CHAT_ID, text="start rolling")
+        roll_start(context)
+        context.job_queue.run_repeating(roll_start,interval=24*60*60)
+        started = 1
+    else :
+        roll_start(context)
 
 
 def stproll(update : Update, context : CallbackContext):
@@ -245,17 +272,19 @@ def buy(update : Update, context : CallbackContext) :
     context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=update._effective_message.message_id)
     context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=tmp)
 
-PRODUCT_NAME, PRODUCT_PRICE, PRODUCT_PHOTO,PRODUCT_INFO = range(4)
-conv_handler = ConversationHandler(
+
+PRODUCT_NAME, PRODUCT_PRICE, PRODUCT_PHOTO,PRODUCT_INFO,PRODUCT_SELLER = range(5)
+sell_process = ConversationHandler(
         entry_points=[CommandHandler('sell', sell)],
         states={
             PRODUCT_NAME: [MessageHandler(Filters.text & (~Filters.command), product_name)],
             PRODUCT_PRICE: [MessageHandler(Filters.text & (~Filters.command), product_price)],
             PRODUCT_PHOTO: [MessageHandler(Filters.photo & (~Filters.command), product_photo)],
             PRODUCT_INFO: [MessageHandler(Filters.text & (~Filters.command), product_info)],
+            PRODUCT_SELLER: [MessageHandler(Filters.text & (~Filters.command), product_seller)],
         },
         fallbacks=[CommandHandler('cancel', cancel)])
-updater.dispatcher.add_handler(conv_handler)
+updater.dispatcher.add_handler(sell_process)
 updater.dispatcher.add_handler(CommandHandler('sold', sold))
 updater.dispatcher.add_handler(CommandHandler('buy', buy))
 updater.dispatcher.add_handler(CommandHandler('roll', roll))
