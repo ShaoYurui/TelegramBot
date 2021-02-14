@@ -98,7 +98,7 @@ def product_info(update : Update, context : CallbackContext) -> int:
     if pre_reminder != 0:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=pre_reminder)
     pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
-                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
+                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to the buyers\n\n type /sell to sell your clothes, reply your item with /sold to remove your item").message_id
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
     waste_msg_list.clear()
@@ -118,7 +118,7 @@ def product_seller(update : Update, context : CallbackContext) -> int:
     if pre_reminder != 0:
         context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=pre_reminder)
     pre_reminder = context.bot.send_message(chat_id=update.effective_chat.id,
-                                            text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
+                                            text="Please be reminded that due to COVID-19, please wash your clothes before passing it to the buyers\n\n type /sell to sell your clothes, reply your item with /sold to remove your item").message_id
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=f"{i}")
     waste_msg_list.clear()
@@ -235,7 +235,7 @@ def roll_start(context : CallbackContext):
     items_list[-1].message_id = tmp
     tmp = pre_reminder;
     pre_reminder = context.bot.send_message(chat_id=WeWardrobe_CHAT_ID,
-                                            text="Please be reminded that due to COVID-19, please wash your clothes before passing it to buyers\nreply your item with /sold to remove your item").message_id
+                                            text="Please be reminded that due to COVID-19, please wash your clothes before passing it to the buyers\n\n type /sell to sell your clothes, reply your item with /sold to remove your item").message_id
     context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID, message_id=w)
     if tmp != 0:
         context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID,message_id=tmp)
