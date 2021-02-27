@@ -1,4 +1,4 @@
-TELEGRAM_BOT_TOKEN = "1497002692:AAGZ15U0t9ymCg7C4kQgUMUOwetWAG5ahFg"
+TELEGRAM_BOT_TOKEN = "1497002692:AAEzsc2le77LDCay1oWQAG3rQ9o9iBRIb0g"
 from time import sleep
 import datetime
 from telegram import Update,Message
