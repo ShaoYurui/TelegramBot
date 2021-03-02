@@ -28,15 +28,10 @@ no_listing = 0
 no_sold = 0
 roll_stop = 0
 started = 0
-availability = 1
 
 
 def sell(update : Update, context : CallbackContext) -> int:
-    global availability
-    if availability:
-        availability = 0
-    else:
-        return ConversationHandler.END
+
     global no_listing
     no_listing += 1
     waste_msg_list.append(update.effective_message.message_id)
@@ -102,8 +97,6 @@ def product_info(update : Update, context : CallbackContext) -> int:
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=f"{i}")
     waste_msg_list.clear()
-    availability = 1
-
     return ConversationHandler.END
 
 
@@ -122,14 +115,11 @@ def product_seller(update : Update, context : CallbackContext) -> int:
     for i in waste_msg_list:
         context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=f"{i}")
     waste_msg_list.clear()
-    availability = 1
-
     return ConversationHandler.END
 
 
 def cancel(update : Update, context : CallbackContext) -> int:
     global no_listing, availability
-    availability = 1
     tmp = context.bot.send_message(chat_id=update.effective_chat.id,
                              text="canceled").message_id
     waste_msg_list.append(tmp)
