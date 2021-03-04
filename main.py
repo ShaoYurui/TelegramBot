@@ -1,13 +1,18 @@
 TELEGRAM_BOT_TOKEN = "1647162923:AAFxVelu_Jx6eOxE09pBZMcEK_Rg-PhzRr4"
 from time import sleep
 import datetime
-from telegram import Update,Message
+import html
+import json
+import logging
+import traceback
+from telegram import Update,Message,ParseMode
 from telegram.ext import Updater, CommandHandler,ConversationHandler, CallbackContext, MessageHandler, Filters, JobQueue
 updater = Updater(TELEGRAM_BOT_TOKEN)
 MY_CHAT_ID = 495295265
 MY_CROUP_CHAT_ID = -503183212
 WeWardrobe_CHAT_ID = -1001409782425
 
+logger = logging.getLogger("yuruuii")
 
 class ITEM:
     def __init__(self, name='NIL',price=0,photo='NIL',seller='NIL',index=0,info='NIL',msg_id = 0):
@@ -133,6 +138,10 @@ def cancel(update : Update, context : CallbackContext) -> int:
     return ConversationHandler.END
 
 
+def end_con() -> int:
+    return ConversationHandler.END
+
+
 def bg_data(update : Update, context : CallbackContext):
     context.bot.send_message(chat_id=MY_CROUP_CHAT_ID,
                              text=f"total number of items listed is {no_listing}")
@@ -223,7 +232,7 @@ def roll_start(context : CallbackContext):
                                    f"Please contact @{items_list[-1].seller} for more information").message_id
     w = items_list[-1].message_id
     items_list[-1].message_id = tmp
-    tmp = pre_reminder;
+    tmp = pre_reminder
     pre_reminder = context.bot.send_message(chat_id=WeWardrobe_CHAT_ID,
                                             text="Please be reminded that due to COVID-19, please wash your clothes before passing it to the buyers\n\nType /sell to sell your clothes, reply your item with /sold to remove your item").message_id
     context.bot.deleteMessage(chat_id=WeWardrobe_CHAT_ID, message_id=w)
@@ -263,8 +272,35 @@ def buy(update : Update, context : CallbackContext) :
     context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=tmp)
 
 
-PRODUCT_NAME, PRODUCT_PRICE, PRODUCT_PHOTO,PRODUCT_INFO,PRODUCT_SELLER = range(5)
+def start(update : Update, context : CallbackContext):
+    tmp = context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="please type /sell to sell your clothes").message_id
+    sleep(5)
+    context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=update._effective_message.message_id)
+    context.bot.deleteMessage(chat_id=update.effective_chat.id,message_id=tmp)
+
+
+def error_handler(update: Update, context: CallbackContext) -> None:
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_string = ''.join(tb_list)
+    message = (
+        f'An exception was raised while handling an update\n'
+        f'<pre>update = {html.escape(json.dumps(update.to_dict(), indent=2, ensure_ascii=False))}'
+        '</pre>\n\n'
+        f'<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n'
+        f'<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n'
+        f'<pre>{html.escape(tb_string)}</pre>'
+    )
+    context.bot.send_message(chat_id=MY_CHAT_ID, text=message, parse_mode=ParseMode.HTML)
+    waste_msg_list.clear()
+    global pre_reminder
+    pre_reminder = 0
+
+
+PRODUCT_NAME, PRODUCT_PRICE, PRODUCT_PHOTO,PRODUCT_INFO,PRODUCT_SELLER,ERROR_HANDLE = range(6)
 sell_process = ConversationHandler(
+        allow_reentry= True,
         entry_points=[CommandHandler('sell', sell)],
         states={
             PRODUCT_NAME: [MessageHandler(Filters.text & (~Filters.command), product_name)],
@@ -274,15 +310,19 @@ sell_process = ConversationHandler(
             PRODUCT_SELLER: [MessageHandler(Filters.text & (~Filters.command), product_seller)],
         },
         fallbacks=[CommandHandler('cancel', cancel)])
+
 updater.dispatcher.add_handler(sell_process)
 updater.dispatcher.add_handler(CommandHandler('sold', sold))
+updater.dispatcher.add_handler(CommandHandler('start', start))
 updater.dispatcher.add_handler(CommandHandler('buy', buy))
 updater.dispatcher.add_handler(CommandHandler('roll', roll))
 updater.dispatcher.add_handler(CommandHandler('remove', remove))
 updater.dispatcher.add_handler(CommandHandler('stproll', stproll))
 updater.dispatcher.add_handler(CommandHandler('bbb', bg_data))
+updater.dispatcher.add_error_handler(error_handler)
 unknown_handler = MessageHandler(Filters.command, unknown)
 updater.dispatcher.add_handler(unknown_handler)
+
 
 updater.start_polling()
 updater.idle()
